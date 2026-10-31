@@ -14,7 +14,8 @@ struct RingoPasswordManagerApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+//            ContentView()
+            TestView()
         }
         .modelContainer(for: PasswordModel.self)
     }

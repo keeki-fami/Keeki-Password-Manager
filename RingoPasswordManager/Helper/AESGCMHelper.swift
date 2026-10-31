@@ -9,7 +9,6 @@ import SwiftUI
 import CryptoKit
 
 struct AESGCMHelper {
-    
     static func encryptText(text: String, using key: SymmetricKey) -> AES.GCM.SealedBox? {
         let data = text.data(using: .utf8)!
         do {
