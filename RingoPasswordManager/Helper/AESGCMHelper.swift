@@ -22,14 +22,12 @@ struct AESGCMHelper {
         }
     }
     
-    static func decrypt(sealedBox: AES.GCM.SealedBox, using key: SymmetricKey) -> String {
+    static func decrypt(sealedBox: AES.GCM.SealedBox, using key: SymmetricKey) -> PasswordDataModel {
         do {
             let data = try AES.GCM.open(sealedBox, using: key)
-            let text = String(data: data, encoding: .utf8) ?? ""
-            return text
+            return try JSONDecoder().decode(PasswordDataModel.self, from: data)
         } catch {
-            print("error: \(error)")
+            fatalError("エラー:\(error)")
         }
-        return ""
     }
 }

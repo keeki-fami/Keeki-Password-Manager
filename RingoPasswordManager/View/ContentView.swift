@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import CryptoKit
+import AppKit
 
 struct ContentView: View {
     @State private var text: String = ""
@@ -28,13 +29,41 @@ struct ContentView: View {
             LazyVStack {
                 ScrollView {
                     ForEach(password) { pass in
-                        Text("\(String(describing: pass))")
+                        Button(action: {
+                            do {
+                                let key = try KeyChainHelper.fetchKey(id: pass.id)
+                                let sealedBox = try AES.GCM.SealedBox(combined: pass.passwordDataModel)
+                                let password = AESGCMHelper.decrypt(sealedBox: sealedBox, using: key)
+                                let pasteboard = NSPasteboard.general
+                                print(password)
+                                pasteboard.clearContents()
+                                pasteboard.setString(password.password , forType: .string)
+                            } catch {
+                                print("error: \(error)")
+                            }
+                        }, label: {
+                            Rectangle()
+                                .fill(.white)
+                                .frame(width: 400, height: 100)
+                                .shadow(
+                                    color: .black.opacity(0.5),
+                                    radius: 10,
+                                    x: 0,
+                                    y: 4
+                                )
+                                .overlay() {
+                                    Text(String(describing: pass))
+                                }
+                        })
                     }
                     // TODO: 復号化 → ForEachで列挙
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .border(.red)
                 Button("追加") {
                     isModal.toggle()
                 }
+                .padding()
             }
             .sheet(isPresented: $isModal, content: {
                 AddNewPassword()

@@ -49,23 +49,6 @@ enum KeychainError: Error {
 }
 
 struct KeyChainHelper {
-    
-    static func add(username: String, password: String) throws {
-        let account = username
-        let password = password.data(using: .utf8)!
-        var query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: password
-        ]
-        
-        // Add the item
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw KeychainError.unhandledError(status: status)
-        }
-    }
-    
     static func saveKey(key: SymmetricKey, id: String) throws {
         let tag = id.data(using: .utf8)!
         
@@ -85,6 +68,38 @@ struct KeyChainHelper {
             throw KeychainError.unhandledError(status: status)
         }
         
+    }
+    
+    static func fetchKey(id: String) throws -> SymmetricKey {
+        let tag = id.data(using: .utf8)!
+        let query = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "keeki-password-manager",
+            kSecAttrAccount: tag,
+            kSecUseDataProtectionKeychain: true,
+            kSecReturnData: true,
+            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ] as [String: Any]
+        
+        var item: CFTypeRef?
+        var secKeyData: Data
+        switch SecItemCopyMatching(query as CFDictionary, &item) {
+        case errSecSuccess:
+            print("item type:", type(of: item as Any))
+            print("item:", item as Any)
+            guard let secKey = item as? Data else { throw KeychainError.unexpectedPasswordData }
+            secKeyData = secKey
+        case errSecItemNotFound:
+            throw KeychainError.noPassword
+        case let status:
+            throw KeychainError.unhandledError(status: status)
+        }
+        do {
+            return try SymmetricKey(genericKeyRepresentation: secKeyData)
+        } catch {
+            print("error: \(error)")
+            throw KeychainError.noPassword
+        }
     }
     
     static func search(username: String) throws -> Credentials{
@@ -117,31 +132,31 @@ struct KeyChainHelper {
         return Credentials(username: account, password: password)
     }
 }
-
-struct TestView: View {
-    @State private var credentials = Credentials(username: "", password: "")
-    var body: some View {
-        TextField("username", text: $credentials.username)
-        TextField("password", text: $credentials.password)
-        
-        Button("add") {
-            do {
-                try KeyChainHelper.add(
-                    username: credentials.username,
-                    password: credentials.password
-                )
-                credentials.username = ""
-                credentials.password = ""
-            } catch {
-                print("error: \(error)")
-            }
-        }
-        Button("search") {
-            do {
-                credentials = try KeyChainHelper.search(username: credentials.username)
-            } catch {
-                print("error: \(error)")
-            }
-        }
-    }
-}
+//
+//struct TestView: View {
+//    @State private var credentials = Credentials(username: "", password: "")
+//    var body: some View {
+//        TextField("username", text: $credentials.username)
+//        TextField("password", text: $credentials.password)
+//        
+//        Button("add") {
+//            do {
+//                try KeyChainHelper.add(
+//                    username: credentials.username,
+//                    password: credentials.password
+//                )
+//                credentials.username = ""
+//                credentials.password = ""
+//            } catch {
+//                print("error: \(error)")
+//            }
+//        }
+//        Button("search") {
+//            do {
+//                credentials = try KeyChainHelper.search(username: credentials.username)
+//            } catch {
+//                print("error: \(error)")
+//            }
+//        }
+//    }
+//}
