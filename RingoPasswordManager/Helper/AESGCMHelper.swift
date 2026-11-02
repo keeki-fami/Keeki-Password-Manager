@@ -9,14 +9,16 @@ import SwiftUI
 import CryptoKit
 
 struct AESGCMHelper {
-    static func encryptText(text: String, using key: SymmetricKey) -> AES.GCM.SealedBox? {
-        let data = text.data(using: .utf8)!
+    static func encryptText(text: PasswordDataModel, using key: SymmetricKey) -> Data {
         do {
-            let sealedBoxData = try AES.GCM.seal(data, using: key)
+            let data = try JSONEncoder().encode(text)
+            let sealedBox = try AES.GCM.seal(data, using: key)
+            guard let sealedBoxData = sealedBox.combined else {
+                fatalError("Data型に変更ができませんでした。")
+            }
             return sealedBoxData
         } catch {
-            print("error: \(error)")
-            return nil
+            fatalError("エラー:\(error)")
         }
     }
     

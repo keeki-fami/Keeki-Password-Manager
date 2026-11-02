@@ -22,23 +22,32 @@ struct ContentView: View {
         .init(size: .bits256)
     ]
     var body: some View {
-        VStack {
-            ScrollView {
-                // TODO: 復号化 → ForEachで列挙
+        if !SecureEnclave.isAvailable {
+            Text("このデバイスではSecure Enclaveへのアクセスがサポートされていません。")
+        } else {
+            LazyVStack {
+                ScrollView {
+                    ForEach(password) { pass in
+                        Text("\(String(describing: pass))")
+                    }
+                    // TODO: 復号化 → ForEachで列挙
+                }
+                Button("追加") {
+                    isModal.toggle()
+                }
             }
-            Button("追加") {
-                isModal.toggle()
-            }
+            .sheet(isPresented: $isModal, content: {
+                AddNewPassword()
+            })
         }
-        .sheet(isPresented: $isModal, content: {
-            AddNewPassword()
-        })
     }
 }
 
 struct AddNewPassword: View {
     @Environment(\.dismiss) var dismiss
     @State private var addData: PasswordDataModel = .init()
+    @Environment(\.modelContext) var context
+    @State private var isAlert = false
     var body: some View {
         TextField("Name", text: $addData.name)
         TextField("user", text: $addData.user)
@@ -47,7 +56,32 @@ struct AddNewPassword: View {
         
         Button("add password") {
             // TODO: パスワードを暗号化、追加処理
-            dismiss()
+            var key = SymmetricKey(size: .bits256)
+            let encryptedData = AESGCMHelper.encryptText(text: addData, using: key)
+            do {
+                try KeyChainHelper.saveKey(key: key, id: addData.id)
+                context.insert(
+                    PasswordModel(
+                        id: addData.id,
+                        passwordDataModel: encryptedData
+                    )
+                )
+                dismiss()
+            } catch {
+                print("error: \(error.localizedDescription)")
+                print("error: \(error)")
+                isAlert.toggle()
+            }
+        }
+        .alert("Error", isPresented: $isAlert, actions: {
+            Button(role: .confirm, action: {
+                isAlert.toggle()
+                dismiss()
+            }) {
+                Text("OK")
+            }
+        }) {
+            Text("エラーが発生しました。")
         }
     }
 }

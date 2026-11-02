@@ -10,7 +10,7 @@ import SwiftData
 import SwiftUI
 
 // MARK: パスワードの型
-struct PasswordDataModel: Identifiable {
+struct PasswordDataModel: Identifiable, Codable {
     var id: String
     var name: String
     var user: String
@@ -45,7 +45,9 @@ extension PasswordDataModel: Equatable {
 @Model
 class PasswordModel {
     var passwordDataModel: Data
-    init(passwordDataModel: Data) {
+    var id: String
+    init(id: String, passwordDataModel: Data) {
         self.passwordDataModel = passwordDataModel
+        self.id = id
     }
 }
